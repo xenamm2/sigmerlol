@@ -1,0 +1,23 @@
+
+local TeleportService = game:GetService("TeleportService")
+local Players = game:GetService("Players")
+local LocalPlayer = Players.LocalPlayer
+
+-- Script loader
+local function LoadMyScript()
+    loadstring(game:HttpGet("https://raw.githubusercontent.com/xenamm2/sigmerlol/refs/heads/main/Rejoin"))()
+end
+
+-- Check if we just rejoined with TeleportData
+local data = TeleportService:GetLocalPlayerTeleportData()
+if data and data.AutoRejoin then
+    LoadMyScript()
+end
+
+-- Hook onto ANY teleport (like rejoin)
+game:GetService("Players").LocalPlayer.OnTeleport:Connect(function(State)
+    if State == Enum.TeleportState.Started then
+        -- Set data so script reloads after teleport
+        TeleportService:SetTeleportData({AutoRejoin = true})
+    end
+end)
