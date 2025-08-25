@@ -4,7 +4,7 @@ local LocalPlayer = Players.LocalPlayer
 
 -- Script loader
 local function LoadMyScript()
-    loadstring(game:HttpGet(""))()
+    loadstring(game:HttpGet("https://raw.githubusercontent.com/xenamm2/sigmerlol/refs/heads/main/Rejoin"))()
 end
 
 -- Check if we just rejoined with TeleportData
