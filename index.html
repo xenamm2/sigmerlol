@@ -1,14 +1,140 @@
-<!DOCTYPE html>
-<html>
+<!doctype html>
+<html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>Home</title>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Embedded page viewer</title>
+  <style>
+    /* Basic reset + nice centered header */
+    html,body { height:100%; margin:0; font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial; background:#f6f8fa; color:#111; }
+    header { padding:16px; display:flex; align-items:center; justify-content:space-between; gap:12px; background:#fff; box-shadow:0 1px 0 rgba(16,24,40,0.04); }
+    header h1 { font-size:16px; margin:0; }
+    main { height: calc(100% - 72px); display:grid; grid-template-rows: 1fr; padding:0; }
+    .frame-wrap { position:relative; width:100%; height:100%; background:#fff; border-top:1px solid rgba(16,24,40,0.04); }
+    iframe { width:100%; height:100%; border:0; display:block; }
+
+    /* fallback overlay shown when embedding is blocked */
+    .fallback {
+      position:absolute;
+      inset:0;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      gap:16px;
+      padding:24px;
+      background:linear-gradient(180deg, rgba(255,255,255,0.9), rgba(250,250,250,0.9));
+      text-align:center;
+      backdrop-filter: blur(2px);
+    }
+    .hidden { display:none; }
+
+    .btn {
+      display:inline-block;
+      padding:10px 14px;
+      border-radius:10px;
+      text-decoration:none;
+      background:#111827;
+      color:#fff;
+      font-weight:600;
+    }
+
+    .note { color:#6b7280; font-size:14px; max-width:38rem; }
+    footer { font-size:13px; color:#6b7280; padding:10px 16px; background:#fff; text-align:right; }
+  </style>
 </head>
 <body>
-  <h2>hello</h2>
-  <p>This is the home page.</p>
-  <p>So go away</p>
-  <p><a href="game/index.html">Game</a></p>
-  <p><a href="about/index.html">About</a></p>
+  <header>
+    <h1>Embedded preview</h1>
+    <div>
+      <a class="btn" id="openNew">Open in new tab</a>
+    </div>
+  </header>
+
+  <main>
+    <div class="frame-wrap">
+      <!-- The target URL -->
+      <iframe id="embeddedFrame" src="https://url-roblox.com/users/7281610496/profile" title="Embedded site"
+              sandbox="allow-scripts allow-same-origin allow-forms allow-popups"></iframe>
+
+      <!-- Fallback shown if embedding is blocked or inaccessible -->
+      <div id="fallback" class="fallback hidden" role="status" aria-live="polite">
+        <div>
+          <p class="note">
+            This site cannot be embedded in a frame (it likely blocks embedding for security). Click the button below to open it in a new tab.
+          </p>
+          <div style="margin-top:12px;">
+            <a id="fallbackOpen" class="btn" href="https://url-roblox.com/users/7281610496/profile" target="_blank" rel="noopener noreferrer">Open profile in new tab</a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <footer>
+    If the embed works you’ll see the live page above. If not, use the button to open it directly.
+  </footer>
+
+  <script>
+    const iframe = document.getElementById('embeddedFrame');
+    const fallback = document.getElementById('fallback');
+    const openNew = document.getElementById('openNew');
+    const url = iframe.src;
+
+    // Set open-in-new link(s)
+    openNew.href = url;
+    openNew.target = "_blank";
+    openNew.rel = "noopener noreferrer";
+    document.getElementById('fallbackOpen').href = url;
+
+    // Heuristic: try to detect if embedding was blocked.
+    // Note: cross-origin frames cannot be inspected; we use a try/catch and onload timeout.
+    let loaded = false;
+    iframe.addEventListener('load', () => {
+      loaded = true;
+      // Try reading a property — will throw if cross-origin and prevented by CSP or if the browser blocked the load entirely.
+      try {
+        // If same-origin and accessible, this will succeed.
+        const doc = iframe.contentDocument || iframe.contentWindow.document;
+        // If doc && doc.body exists, assume OK.
+        if (!doc || !doc.body) throw new Error('no document body');
+        // hide fallback if previously visible
+        fallback.classList.add('hidden');
+      } catch (err) {
+        // likely cross-origin — but cross-origin alone is normal; we only show fallback if the frame is effectively unusable.
+        // Wait a moment then check frame height/contentWindow.location (may throw)
+        setTimeout(() => {
+          try {
+            // A successful access here would be surprising for cross-origin; most likely this throws.
+            const cw = iframe.contentWindow;
+            // If the browser refused to load the frame, contentWindow might be null or about:blank.
+            if (!cw || cw.location === null || cw.location.href === 'about:blank') {
+              fallback.classList.remove('hidden');
+            } else {
+              // Could be cross-origin but loaded fine; keep fallback hidden.
+              fallback.classList.add('hidden');
+            }
+          } catch (e) {
+            // Access denied due to cross-origin — we can't tell if it's visually present, so don't force fallback.
+            // However, many embedding protections cause browsers to show an error page in the frame (which we can't read).
+            // We'll attempt a conservative check: if the iframe's offsetHeight is very small, consider blocked.
+            const height = iframe.offsetHeight || 0;
+            if (height < 50) {
+              fallback.classList.remove('hidden');
+            } else {
+              // leave it visible (embedding may have succeeded)
+              fallback.classList.add('hidden');
+            }
+          }
+        }, 250);
+      }
+    });
+
+    // If load never fires (blocked by the server before sending), show fallback after a short timeout
+    setTimeout(() => {
+      if (!loaded) {
+        fallback.classList.remove('hidden');
+      }
+    }, 1500);
+  </script>
 </body>
 </html>
